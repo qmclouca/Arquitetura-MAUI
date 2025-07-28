@@ -1,0 +1,151 @@
+@startuml Testing_Strategy
+
+title Estratégia de Testes - MAUI Desktop com Microserviços
+
+package "Application Under Test" {
+    component [Domain Layer] as Domain
+    component [Application Layer] as Application
+    component [Infrastructure Layer] as Infrastructure
+    component [Presentation Layer] as Presentation
+}
+
+package "Unit Tests" {
+    component [Domain Tests] as DomainTests
+    component [Application Tests] as AppTests
+    component [ViewModel Tests] as ViewModelTests
+    component [Value Object Tests] as ValueObjectTests
+    component [Entity Tests] as EntityTests
+}
+
+package "Integration Tests" {
+    component [API Service Tests] as ApiServiceTests
+    component [Authentication Tests] as AuthTests
+    component [Cache Tests] as CacheTests
+    component [HTTP Client Tests] as HttpTests
+    component [Configuration Tests] as ConfigTests
+}
+
+package "UI Tests" {
+    component [View Tests] as ViewTests
+    component [Navigation Tests] as NavigationTests
+    component [Binding Tests] as BindingTests
+    component [Control Tests] as ControlTests
+}
+
+package "API Tests" {
+    component [Contract Tests] as ContractTests
+    component [Performance Tests] as PerfTests
+    component [Security Tests] as SecurityTests
+    component [Error Handling Tests] as ErrorTests
+}
+
+package "Test Infrastructure" {
+    component [Test Fixtures] as Fixtures
+    component [Mock Factory] as MockFactory
+    component [Test Data Builders] as Builders
+    component [Test Doubles] as Doubles
+    component [Test Utilities] as Utilities
+}
+
+' Unit Test Relationships
+DomainTests --> Domain : Tests business logic
+AppTests --> Application : Tests use cases
+ViewModelTests --> Presentation : Tests UI logic
+ValueObjectTests --> Domain : Tests immutability
+EntityTests --> Domain : Tests behavior
+
+' Integration Test Relationships
+ApiServiceTests --> Infrastructure : Tests API communication
+AuthTests --> Infrastructure : Tests authentication flow
+CacheTests --> Infrastructure : Tests caching strategy
+HttpTests --> Infrastructure : Tests HTTP clients
+ConfigTests --> Infrastructure : Tests configuration
+
+' UI Test Relationships
+ViewTests --> Presentation : Tests UI components
+NavigationTests --> Presentation : Tests page navigation
+BindingTests --> Presentation : Tests data binding
+ControlTests --> Presentation : Tests custom controls
+
+' API Test Relationships
+ContractTests --> [External APIs] : Validates contracts
+PerfTests --> [External APIs] : Measures performance
+SecurityTests --> [External APIs] : Tests security
+ErrorTests --> [External APIs] : Tests error scenarios
+
+' Test Infrastructure Relationships
+Fixtures --> DomainTests : Provides setup
+MockFactory --> AppTests : Creates mocks
+Builders --> ViewModelTests : Creates test data
+Doubles --> ApiServiceTests : Simulates dependencies
+Utilities --> ViewTests : Common test helpers
+
+' External Dependencies
+[External APIs] --> [Microservices] : Real services
+MockFactory --> [Moq/NSubstitute] : Mocking framework
+Fixtures --> [xUnit/NUnit] : Test framework
+Builders --> [Bogus/AutoFixture] : Data generation
+
+' Test Execution Flow
+database "Test Results" {
+    component [Coverage Reports] as Coverage
+    component [Test Reports] as Reports
+    component [Performance Metrics] as Metrics
+    component [Quality Gates] as Gates
+}
+
+DomainTests --> Coverage : Generates
+AppTests --> Reports : Generates
+ViewModelTests --> Metrics : Generates
+ApiServiceTests --> Gates : Validates
+
+' CI/CD Integration
+cloud "CI/CD Pipeline" {
+    component [Build Stage] as Build
+    component [Test Stage] as Test
+    component [Quality Check] as Quality
+    component [Deploy Stage] as Deploy
+}
+
+Test --> Build : Triggers
+Coverage --> Quality : Validates
+Reports --> Quality : Validates
+Quality --> Deploy : Gates
+
+' Notes
+note right of DomainTests
+  - Fast execution (< 1s)
+  - No external dependencies
+  - High code coverage (>90%)
+  - Business rule validation
+end note
+
+note right of ApiServiceTests
+  - Mock HTTP responses
+  - Test retry policies
+  - Validate error handling
+  - Authentication flows
+end note
+
+note right of ViewTests
+  - UI component rendering
+  - User interaction simulation
+  - Accessibility testing
+  - Responsive design validation
+end note
+
+note bottom of MockFactory
+  - Consistent mock creation
+  - Behavior verification
+  - State-based testing
+  - Interaction testing
+end note
+
+note left of Coverage
+  - Line coverage > 80%
+  - Branch coverage > 70%
+  - Method coverage > 90%
+  - Class coverage > 85%
+end note
+
+@enduml

@@ -1,0 +1,213 @@
+@startuml Domain_Model
+
+title Domain Model - Customer and Order Aggregates
+
+class Customer {
+    - id: int
+    - name: string
+    - email: Email
+    - createdAt: DateTime
+    - status: CustomerStatus
+    - customerType: CustomerType
+    - orders: List<Order>
+    --
+    + UpdateEmail(newEmail: Email): void
+    + Deactivate(): void
+    + Activate(): void
+    + CreateOrder(items: IEnumerable<OrderItem>): Order
+    + GetTotalOrderValue(): Money
+    + IsEligibleForDiscount(): bool
+}
+
+class Email <<value object>> {
+    - value: string
+    --
+    + Email(value: string)
+    + IsValid(): bool
+    + ToString(): string
+    + Equals(other: Email): bool
+}
+
+class Money <<value object>> {
+    - amount: decimal
+    - currency: Currency
+    --
+    + Money(amount: decimal, currency: Currency)
+    + Add(other: Money): Money
+    + Subtract(other: Money): Money
+    + Multiply(factor: decimal): Money
+    + Divide(factor: decimal): Money
+    + ToString(): string
+    + Equals(other: Money): bool
+}
+
+class Address <<value object>> {
+    - street: string
+    - city: string
+    - zipCode: string
+    - country: string
+    --
+    + Address(street, city, zipCode, country)
+    + IsValid(): bool
+    + ToString(): string
+    + Equals(other: Address): bool
+}
+
+class Order {
+    - id: int
+    - customerId: int
+    - orderDate: DateTime
+    - status: OrderStatus
+    - items: List<OrderItem>
+    - shippingAddress: Address
+    - discountPercentage: decimal
+    - notes: string
+    --
+    + AddItem(productId: int, quantity: int, price: Money): void
+    + RemoveItem(productId: int): void
+    + UpdateItemQuantity(productId: int, newQuantity: int): void
+    + Confirm(): void
+    + Ship(): void
+    + Cancel(): void
+    + CalculateSubtotal(): Money
+    + CalculateDiscount(): Money
+    + CalculateTotal(): Money
+    + ApplyDiscount(percentage: decimal): void
+    + SetShippingAddress(address: Address): void
+}
+
+class OrderItem {
+    - id: int
+    - orderId: int
+    - productId: int
+    - productName: string
+    - quantity: int
+    - unitPrice: Money
+    --
+    + OrderItem(productId, productName, quantity, unitPrice)
+    + UpdateQuantity(newQuantity: int): void
+    + GetTotalPrice(): Money
+    + ChangeUnitPrice(newPrice: Money): void
+}
+
+class Product {
+    - id: int
+    - name: string
+    - description: string
+    - price: Money
+    - category: ProductCategory
+    - isActive: bool
+    - stockQuantity: int
+    --
+    + UpdatePrice(newPrice: Money): void
+    + UpdateStock(quantity: int): void
+    + Activate(): void
+    + Deactivate(): void
+    + IsInStock(): bool
+    + CanFulfillQuantity(requestedQuantity: int): bool
+}
+
+enum CustomerStatus {
+    Active
+    Inactive
+    Suspended
+}
+
+enum CustomerType {
+    Standard
+    Premium
+    Corporate
+}
+
+enum OrderStatus {
+    Draft
+    Pending
+    Confirmed
+    Shipped
+    Delivered
+    Cancelled
+    Returned
+}
+
+enum ProductCategory {
+    Electronics
+    Clothing
+    Books
+    Home
+    Sports
+    Other
+}
+
+class Currency <<value object>> {
+    - code: string
+    - name: string
+    - symbol: string
+    --
+    + Currency(code, name, symbol)
+    + ToString(): string
+    + Equals(other: Currency): bool
+}
+
+' Relationships
+Customer ||--|| Email : has
+Customer ||--|| CustomerStatus : has
+Customer ||--|| CustomerType : has
+Customer ||--o{ Order : places
+
+Order ||--|| OrderStatus : has
+Order ||--|| Address : ships to
+Order ||--o{ OrderItem : contains
+Order ||--|| Customer : belongs to
+
+OrderItem ||--|| Money : priced with
+OrderItem ||--|| Product : references
+
+Product ||--|| Money : priced with
+Product ||--|| ProductCategory : categorized as
+
+Money ||--|| Currency : denominated in
+
+' Aggregates
+package "Customer Aggregate" {
+    Customer
+    Email
+}
+
+package "Order Aggregate" {
+    Order
+    OrderItem
+    Address
+}
+
+package "Product Aggregate" {
+    Product
+}
+
+package "Shared Value Objects" {
+    Money
+    Currency
+}
+
+note top of Customer : Aggregate Root
+note top of Order : Aggregate Root
+note top of Product : Aggregate Root
+
+note right of Email
+    Immutable Value Object
+    Validates email format
+    Used for customer identification
+end note
+
+note right of Money
+    Immutable Value Object
+    Handles currency operations
+    Prevents precision errors
+end note
+
+note right of Address
+    Immutable Value Object
+    Complete address information
+    Used for shipping
+end note
+
+@enduml

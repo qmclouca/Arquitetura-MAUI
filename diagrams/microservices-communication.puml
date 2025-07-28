@@ -1,0 +1,109 @@
+@startuml Microservices_Communication
+
+title Comunicação MAUI Desktop com Microserviços .NET Core
+
+package "MAUI Desktop Application" {
+    component [Views] as Views
+    component [ViewModels] as ViewModels
+    component [Application Services] as AppServices
+    component [API Service Layer] as ApiLayer
+    component [HTTP Clients] as HttpClients
+    component [Authentication Manager] as AuthManager
+    component [Cache Manager] as CacheManager
+    component [Retry Policies] as RetryPolicies
+}
+
+cloud "API Gateway" as Gateway {
+    component [Load Balancer] as LB
+    component [Authentication\n(JWT Validation)] as GatewayAuth
+    component [Rate Limiting] as RateLimit
+    component [Request Routing] as Routing
+}
+
+package "Microservices Ecosystem" {
+    component [Customer Service\n(.NET Core API)] as CustomerAPI
+    component [Order Service\n(.NET Core API)] as OrderAPI
+    component [Product Service\n(.NET Core API)] as ProductAPI
+    component [Notification Service\n(.NET Core API)] as NotificationAPI
+    component [Identity Service\n(.NET Core API)] as IdentityAPI
+}
+
+database "Databases" {
+    database [Customer DB] as CustomerDB
+    database [Order DB] as OrderDB
+    database [Product DB] as ProductDB
+    database [Identity DB] as IdentityDB
+}
+
+' MAUI Application Flow
+Views --> ViewModels : Data Binding
+ViewModels --> AppServices : Business Operations
+AppServices --> ApiLayer : Service Calls
+ApiLayer --> HttpClients : HTTP Requests
+
+' HTTP Client Configuration
+HttpClients --> AuthManager : Get JWT Token
+HttpClients --> CacheManager : Check/Store Cache
+HttpClients --> RetryPolicies : Handle Failures
+
+' API Gateway Communication
+HttpClients --> Gateway : HTTPS Requests
+Gateway --> GatewayAuth : Validate Token
+Gateway --> RateLimit : Check Limits
+Gateway --> LB : Balance Load
+Gateway --> Routing : Route to Service
+
+' Microservices
+Routing --> CustomerAPI : /api/customers
+Routing --> OrderAPI : /api/orders
+Routing --> ProductAPI : /api/products
+Routing --> NotificationAPI : /api/notifications
+Routing --> IdentityAPI : /api/auth
+
+' Database Access (Microservices only)
+CustomerAPI --> CustomerDB : Entity Framework
+OrderAPI --> OrderDB : Entity Framework
+ProductAPI --> ProductDB : Entity Framework
+IdentityAPI --> IdentityDB : Entity Framework
+
+' Authentication Flow
+AuthManager --> IdentityAPI : Login/Refresh Token
+IdentityAPI --> AuthManager : JWT Token
+
+' Caching Strategy
+CacheManager --> CustomerAPI : Cache Customer Data
+CacheManager --> ProductAPI : Cache Product Catalog
+
+' Notes
+note right of HttpClients
+  - HttpClientFactory
+  - Base URLs configuration
+  - Default headers
+  - Timeout settings
+  - SSL certificate validation
+end note
+
+note right of Gateway
+  - Single entry point
+  - Cross-cutting concerns
+  - Service discovery
+  - Circuit breaker
+  - Monitoring/Logging
+end note
+
+note bottom of CustomerAPI
+  - RESTful endpoints
+  - Swagger documentation
+  - Data validation
+  - Business logic
+  - Database operations
+end note
+
+note left of AuthManager
+  - JWT token management
+  - Automatic refresh
+  - Secure storage
+  - Logout handling
+end note
+
+@enduml

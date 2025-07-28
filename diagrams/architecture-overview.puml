@@ -1,0 +1,156 @@
+@startuml Architecture_Overview
+
+title Arquitetura MAUI Desktop - Visão Geral
+
+package "Presentation Layer" {
+    component [Views\n(XAML)] as Views
+    component [ViewModels\n(MVVM)] as ViewModels
+    component [Converters] as Converters
+    component [Behaviors] as Behaviors
+    component [Controls] as Controls
+}
+
+package "Application Layer" {
+    component [Application Services\n(API Orchestration)] as AppServices
+    component [DTOs & Models] as DTOs
+    component [API Contracts] as ApiContracts
+    component [Validators\n(FluentValidation)] as Validators
+    component [Mappers\n(AutoMapper)] as Mappers
+    component [Cache Manager] as CacheManager
+}
+
+package "Domain Layer" {
+    component [Local Models\n(Customer, Order)] as Entities
+    component [Value Objects\n(Email, Address)] as ValueObjects
+    component [Local Validation\nServices] as DomainServices
+    component [Domain Events\n(UI Events)] as DomainEvents
+    component [Business Rules\n(Client-side)] as Specifications
+}
+
+package "Infrastructure Layer" {
+    component [HTTP Clients] as HttpClients
+    component [API Service Implementations] as ApiServices
+    component [Authentication\n(JWT/OAuth)] as Auth
+    component [Cache Layer\n(Memory/Redis)] as Cache
+    component [Logging\n(Serilog)] as Logging
+    component [Configuration] as Config
+    component [Retry Policies\n(Polly)] as RetryPolicies
+}
+
+package "Testing Layer" {
+    component [Unit Tests\n(xUnit/NUnit)] as UnitTests
+    component [Integration Tests] as IntegrationTests
+    component [UI Tests\n(Appium)] as UITests
+    component [API Tests\n(HttpClient)] as ApiTests
+    component [Mocks & Stubs\n(Moq/NSubstitute)] as Mocks
+    component [Test Fixtures] as TestFixtures
+    component [Test Data Builders] as TestBuilders
+}
+
+' Relationships
+Views --> ViewModels : Data Binding
+ViewModels --> AppServices : Calls
+AppServices --> DomainServices : Uses locally
+AppServices --> ApiContracts : Depends on
+ApiContracts <|-- ApiServices : Implements
+ApiServices --> HttpClients : Uses
+AppServices --> DTOs : Returns
+DTOs <-- Mappers : Creates
+Validators --> DTOs : Validates
+AppServices --> CacheManager : Uses
+CacheManager --> Cache : Manages
+DomainServices --> Entities : Validates locally
+Entities --> ValueObjects : Contains
+Entities --> DomainEvents : Raises
+Specifications --> Entities : Filters locally
+
+' Infrastructure Dependencies
+HttpClients --> Auth : Authenticates
+HttpClients --> RetryPolicies : Uses
+ApiServices --> Cache : Caches responses
+Logging --> ApiServices : Logs API calls
+Config --> HttpClients : Configures endpoints
+
+' External API Communication
+HttpClients --> [Microservices\n(.NET Core APIs)] : HTTP/HTTPS
+
+' Testing Dependencies
+UnitTests --> Entities : Tests
+UnitTests --> ValueObjects : Tests
+UnitTests --> DomainServices : Tests
+UnitTests --> AppServices : Tests
+UnitTests --> ViewModels : Tests
+UnitTests --> Mocks : Uses
+IntegrationTests --> ApiServices : Tests
+IntegrationTests --> HttpClients : Tests
+UITests --> Views : Tests
+UITests --> ViewModels : Tests
+ApiTests --> [Microservices\n(.NET Core APIs)] : Tests
+Mocks --> ServiceInterfaces : Mocks
+TestFixtures --> UnitTests : Provides setup
+TestBuilders --> UnitTests : Creates test data
+
+' Notes
+note right of Views
+  - XAML-based UI
+  - Data Binding
+  - No business logic
+end note
+
+note right of ViewModels
+  - MVVM Pattern
+  - Observable Properties
+  - Commands
+  - UI State Management
+end note
+
+note right of AppServices
+  - Use Cases
+  - Orchestration
+  - API Coordination
+  - Error Handling
+end note
+
+note right of Entities
+  - Local Data Models
+  - Client-side Rules
+  - UI State Objects
+  - Local Validation
+end note
+
+note right of ApiServices
+  - HTTP Communication
+  - API Contracts
+  - Response Mapping
+  - Connection Management
+end note
+
+note bottom of HttpClients
+  - RESTful API calls
+  - Authentication headers
+  - Retry mechanisms
+  - Circuit breaker
+end note
+
+note right of UnitTests
+  - Fast execution
+  - Isolated testing
+  - Mocked dependencies
+  - Business logic validation
+end note
+
+note left of IntegrationTests
+  - End-to-end flows
+  - API communication
+  - Real dependencies
+  - Configuration testing
+end note
+
+note bottom of Mocks
+  - Isolated unit testing
+  - Behavior verification
+  - Dependency simulation
+  - Test speed optimization
+end note
+
+@enduml

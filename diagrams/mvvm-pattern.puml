@@ -1,0 +1,191 @@
+@startuml MVVM_Pattern
+title MVVM Pattern - Component Interaction
+
+package "View Layer" {
+    class CustomerListView {
+        + CustomerListView.xaml
+        + CustomerListView.xaml.cs
+        - DataContext: CustomerListViewModel
+        --
+        + InitializeComponent(): void
+        - OnLoaded(sender, e): void
+    }
+    
+    class CustomersDataGrid {
+        + ItemsSource: IEnumerable<CustomerDto>
+        + SelectedItem: CustomerDto
+        --
+        + RefreshData(): void
+    }
+    
+    class BoolToVisibilityConverter {
+        + Convert(value, targetType, parameter, culture): object
+        + ConvertBack(value, targetType, parameter, culture): object
+    }
+    
+    class ValidationBehavior {
+        + ValidationErrors: IEnumerable<string>
+        + IsValid: bool
+        --
+        + Validate(): bool
+        + ShowErrors(): void
+    }
+}
+
+package "ViewModel Layer" {
+    class CustomerListViewModel {
+        - _customerService: ICustomerService
+        - _navigationService: INavigationService
+        - _logger: ILogger<CustomerListViewModel>
+        --
+        + Customers: ObservableCollection<CustomerDto>
+        + SelectedCustomer: CustomerDto
+        + IsLoading: bool
+        + SearchText: string
+        + ErrorMessage: string
+        --
+        + LoadCustomersCommand: IAsyncRelayCommand
+        + AddCustomerCommand: IAsyncRelayCommand
+        + EditCustomerCommand: IAsyncRelayCommand<CustomerDto>
+        + DeleteCustomerCommand: IAsyncRelayCommand<CustomerDto>
+        + SearchCommand: IAsyncRelayCommand<string>
+        + RefreshCommand: IAsyncRelayCommand
+        --
+        - LoadCustomersAsync(): Task
+        - AddCustomerAsync(): Task
+        - EditCustomerAsync(customer: CustomerDto): Task
+        - DeleteCustomerAsync(customer: CustomerDto): Task
+        - SearchCustomersAsync(searchText: string): Task
+        - RefreshAsync(): Task
+        + OnPropertyChanged(propertyName: string): void
+    }
+    
+    class BaseViewModel {
+        # _logger: ILogger
+        --
+        + IsBusy: bool
+        + IsNotBusy: bool
+        + Title: string
+        --
+        # SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null): bool
+        # OnPropertyChanged([CallerMemberName] string propertyName = null): void
+        # SetBusyState(busy: bool): void
+    }
+}
+
+package "Model Layer" {
+    class CustomerDto {
+        + Id: int
+        + Name: string
+        + Email: string
+        + Status: string
+        + CustomerType: string
+        + CreatedAt: DateTime
+        + TotalOrders: int
+        + TotalSpent: decimal
+        --
+        + ToString(): string
+        + Equals(other: CustomerDto): bool
+    }
+    
+    interface ICustomerService {
+        + GetAllCustomersAsync(): Task<IEnumerable<CustomerDto>>
+        + GetCustomerByIdAsync(id: int): Task<CustomerDto>
+        + CreateCustomerAsync(request: CreateCustomerRequest): Task<Result<CustomerDto>>
+        + UpdateCustomerAsync(id: int, request: UpdateCustomerRequest): Task<Result<CustomerDto>>
+        + DeleteCustomerAsync(id: int): Task<Result>
+        + SearchCustomersAsync(searchTerm: string): Task<IEnumerable<CustomerDto>>
+    }
+    
+    class CustomerService {
+        - _repository: ICustomerRepository
+        - _mapper: IMapper
+        - _validator: IValidator<CreateCustomerRequest>
+        - _logger: ILogger<CustomerService>
+        --
+        + GetAllCustomersAsync(): Task<IEnumerable<CustomerDto>>
+        + GetCustomerByIdAsync(id: int): Task<CustomerDto>
+        + CreateCustomerAsync(request: CreateCustomerRequest): Task<Result<CustomerDto>>
+        + UpdateCustomerAsync(id: int, request: UpdateCustomerRequest): Task<Result<CustomerDto>>
+        + DeleteCustomerAsync(id: int): Task<Result>
+        + SearchCustomersAsync(searchTerm: string): Task<IEnumerable<CustomerDto>>
+    }
+}
+
+package "Infrastructure" {
+    interface INavigationService {
+        + NavigateToAsync(route: string): Task
+        + NavigateToAsync(route: string, parameters: object): Task
+        + NavigateBackAsync(): Task
+        + GoToRootAsync(): Task
+    }
+    
+    class NavigationService {
+        + NavigateToAsync(route: string): Task
+        + NavigateToAsync(route: string, parameters: object): Task
+        + NavigateBackAsync(): Task
+        + GoToRootAsync(): Task
+    }
+}
+
+' Inheritance
+CustomerListViewModel --|> BaseViewModel
+
+' Implementation
+CustomerService ..|> ICustomerService
+NavigationService ..|> INavigationService
+
+' Dependencies
+CustomerListView --> CustomerListViewModel : DataContext
+CustomerListView --> CustomersDataGrid : Contains
+CustomerListView --> BoolToVisibilityConverter : Uses
+CustomerListView --> ValidationBehavior : Uses
+
+CustomerListViewModel --> ICustomerService : Uses
+CustomerListViewModel --> INavigationService : Uses
+CustomerListViewModel --> CustomerDto : Works with
+
+CustomerService --> CustomerDto : Returns
+
+' Data Binding
+CustomerListView ..> CustomerDto : Displays via Binding
+CustomersDataGrid ..> CustomerDto : ItemsSource Binding
+
+' Command Binding
+CustomerListView ..> CustomerListViewModel : Command Binding
+
+note top of CustomerListView
+    XAML View with:
+    - Data Binding
+    - Command Binding
+    - Converters
+    - Behaviors
+    - No business logic
+end note
+
+note top of CustomerListViewModel
+    ViewModel with:
+    - Observable Properties
+    - Commands (IRelayCommand)
+    - Property Change Notifications
+    - UI State Management
+    - Calls to Application Services
+end note
+
+note top of CustomerDto
+    Data Transfer Object:
+    - Simple data container
+    - No business logic
+    - Used for UI binding
+    - Serializable
+end note
+
+note right of ICustomerService
+    Application Service:
+    - Use case orchestration
+    - Transaction boundaries
+    - DTO mapping
+    - Validation coordination
+end note
+
+@enduml

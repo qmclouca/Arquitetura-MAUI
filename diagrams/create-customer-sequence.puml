@@ -1,0 +1,119 @@
+@startuml Create_Customer_Sequence
+title Create Customer - Sequence Diagram
+
+actor User as U
+participant "CustomerListView" as View
+participant "CustomerListViewModel" as VM
+participant "ICustomerService" as Service
+participant "ICustomerRepository" as Repo
+participant "ApplicationDbContext" as DbContext
+participant "CustomerFactory" as Factory
+participant "IEmailService" as EmailSvc
+database "SQLite Database" as DB
+
+U -> View : Click "Add Customer"
+activate View
+View -> VM : AddCustomerCommand.Execute()
+activate VM
+VM -> View : Navigate to CustomerDetailView
+deactivate VM
+deactivate View
+
+U -> View : Enter customer data\n(Name, Email, Type)
+U -> View : Click "Save"
+activate View
+View -> VM : SaveCustomerCommand.Execute()
+activate VM
+
+VM -> VM : Validate input data
+alt Input validation fails
+    VM -> View : Show validation errors
+    View -> U : Display error messages
+else Input validation succeeds
+    VM -> Service : CreateCustomerAsync(request)
+    activate Service
+    
+    Service -> Repo : GetByEmailAsync(email)
+    activate Repo
+    Repo -> DbContext : Customers.FirstOrDefaultAsync(c => c.Email == email)
+    activate DbContext
+    DbContext -> DB : SELECT * FROM Customers WHERE Email = ?
+    activate DB
+    DB --> DbContext : Customer data or null
+    deactivate DB
+    DbContext --> Repo : Customer entity or null
+    deactivate DbContext
+    Repo --> Service : Customer or null
+    deactivate Repo
+    
+    alt Email already exists
+        Service --> VM : Result.Failure("Email already exists")
+        VM -> View : Show error message
+        View -> U : Display "Email already exists"
+    else Email is unique
+        Service -> Factory : CreateCustomer(name, email, type)
+        activate Factory
+        Factory --> Service : New Customer entity
+        deactivate Factory
+        
+        Service -> Repo : AddAsync(customer)
+        activate Repo
+        Repo -> DbContext : Customers.Add(customer)
+        activate DbContext
+        DbContext --> Repo : EntityEntry<Customer>
+        deactivate DbContext
+        deactivate Repo
+        
+        Service -> Repo : SaveChangesAsync()
+        activate Repo
+        Repo -> DbContext : SaveChangesAsync()
+        activate DbContext
+        DbContext -> DB : INSERT INTO Customers (Name, Email, ...)
+        activate DB
+        DB --> DbContext : Inserted ID
+        deactivate DB
+        DbContext --> Repo : Changes saved count
+        deactivate DbContext
+        Repo --> Service : Success
+        deactivate Repo
+        
+        ' Domain Event Processing
+        Service -> Service : Process Domain Events
+        note right of Service : CustomerCreatedEvent is raised
+        
+        Service -> EmailSvc : SendWelcomeEmailAsync(email, name)
+        activate EmailSvc
+        EmailSvc --> Service : Email sent
+        deactivate EmailSvc
+        
+        Service --> VM : Result.Success(CustomerDto)
+        deactivate Service
+        
+        VM -> View : Show success message
+        VM -> View : Navigate back to CustomerList
+        View -> U : Display "Customer created successfully"
+        
+        VM -> VM : Refresh customer list
+        VM -> Service : GetAllCustomersAsync()
+        activate Service
+        Service --> VM : Updated customer list
+        deactivate Service
+    end
+end
+
+deactivate VM
+deactivate View
+
+note over U, DB
+    This sequence shows the complete flow of creating a customer,
+    including validation, persistence, domain events, and UI updates.
+    
+    Key patterns demonstrated:
+    - MVVM with Commands
+    - Repository Pattern
+    - Domain-Driven Design
+    - Event-Driven Architecture
+    - Error Handling
+end note
+
+@enduml
